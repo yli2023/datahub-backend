@@ -3,10 +3,12 @@ package com.pig4cloud.pig.demo.controller;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.pig4cloud.pig.common.core.util.R;
 import com.pig4cloud.pig.common.log.annotation.SysLog;
+import com.pig4cloud.pig.demo.mapper.DemoMapper;
 import com.pig4cloud.plugin.excel.annotation.ResponseExcel;
 import com.pig4cloud.pig.demo.entity.DemoEntity;
 import com.pig4cloud.pig.demo.service.DemoService;
@@ -20,8 +22,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Objects;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.*;
 
 /**
  * demo 表
@@ -37,6 +42,7 @@ import java.util.Objects;
 public class DemoController {
 
     private final  DemoService demoService;
+	private final DemoMapper demoMapper;
 
     /**
      * 分页查询
@@ -48,7 +54,7 @@ public class DemoController {
     @GetMapping("/page" )
     @HasPermission("demo_demo_view")
     public R getDemoPage(@ParameterObject Page page, @ParameterObject DemoEntity demo) {
-        LambdaQueryWrapper<DemoEntity> wrapper = Wrappers.lambdaQuery();
+        LambdaQueryWrapper<DemoEntity> wrapper = Wrappers.lambdaQuery(demo);
         return R.ok(demoService.page(page, wrapper));
     }
 
@@ -117,4 +123,51 @@ public class DemoController {
     public List<DemoEntity> export(DemoEntity demo,Long[] ids) {
         return demoService.list(Wrappers.lambdaQuery(demo).in(ArrayUtil.isNotEmpty(ids), DemoEntity::getId, ids));
     }
+
+	/**
+	 * 查询结果只返回两列
+	 * <p>
+	 * 只显示id、name 两列
+	 */
+	@Operation(summary = "按列查询demo 表" , description = "按列查询demo 表" )
+	@GetMapping("/select" )
+	@HasPermission("demo_demo_view")
+	public R getSelect() {
+		LambdaQueryWrapper<DemoEntity> wrapper = Wrappers.lambdaQuery();
+//		wrapper.like("username", "1").lt("id", 40).select("id","name");
+//		wrapper.gt(DemoEntity::getId, 40).select(DemoEntity::getUsername, DemoEntity::getNicename);
+		List<DemoEntity> res = demoService.list(wrapper);
+		return R.ok(res);
+	}
+
+	/**
+	 * 查询结果只返回两列(显示)
+	 * <p>
+	 * 只显示id、name 两列
+	 */
+	@Operation(summary = "按列查询demo 表" , description = "按列查询demo 表" )
+	@GetMapping("/select1" )
+	@HasPermission("demo_demo_view")
+	public R getSelect(@ParameterObject Page page, @ParameterObject DemoEntity demo) {
+		LambdaQueryWrapper<DemoEntity> wrapper = Wrappers.lambdaQuery(demo);
+		wrapper.select(DemoEntity::getId, DemoEntity::getUsername);
+		return R.ok(demoService.page(page, wrapper));
+	}
+
+	/**
+	 * 列名接口
+	 * <p>
+	 * 返回列名
+	 */
+	@Operation(summary = "返回列名" , description = "返回列名" )
+	@GetMapping("/column" )
+	@HasPermission("demo_demo_view")
+//	public R getColumn(String tableName) {
+//		List<String> res = demoMapper.getColumnNames(tableName);
+//		return R.ok(res);
+//	}
+		public R getColumn() {
+		List<String> res = demoMapper.getColumnNames("demo");
+		return R.ok(res);
+	}
 }

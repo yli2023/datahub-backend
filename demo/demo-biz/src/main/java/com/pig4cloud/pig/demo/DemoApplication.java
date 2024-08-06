@@ -11,7 +11,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 * <p>
 * 项目启动类
 */
-@EnablePigDoc("pig")
+@EnablePigDoc(value = "demo")
 @EnablePigResourceServer
 @EnableDiscoveryClient
 @SpringBootApplication
