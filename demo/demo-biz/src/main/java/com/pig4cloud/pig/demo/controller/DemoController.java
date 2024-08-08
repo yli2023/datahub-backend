@@ -29,6 +29,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -138,14 +139,15 @@ public class DemoController {
 	@Operation(summary = "数据库的部分时间返回前端" , description = "数据库的部分时间返回前端" )
 	@GetMapping("/select" )
 	@HasPermission("demo_demo_view")
-	public R getSelect(@RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime) {
-		Integer header= demoMapper.findIdByCreateTime(startTime, "demo");
-		Integer bottom= demoMapper.findIdByCreateTime(endTime, "demo");
+	public R getSelect(@RequestParam("tableName") String tableName, @RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime) {
+		Long header= demoMapper.findIdByCreateTime(startTime, tableName);
+		Long bottom= demoMapper.findIdByCreateTime(endTime, tableName);
+		Long firstRecord = demoMapper.getFirstRecordId(tableName);
 //		wrapper.like("username", "1").lt("id", 40).select("id","name");
 //		wrapper.gt(DemoEntity::getId, 40).select(DemoEntity::getUsername, DemoEntity::getNicename);
-		List<Date> res = demoMapper.selectTime("create_time", "demo");
+		List<Date> res = demoMapper.selectTime("create_time", tableName);
 		//截取需要的数
-		List<Date> subList = res.subList(header, bottom + 1);
+		List<Date> subList = res.subList((int) (header-firstRecord), (int) (bottom + 1-firstRecord));
 		return R.ok(subList);
 	}
 
@@ -157,36 +159,52 @@ public class DemoController {
 	@Operation(summary = "滤波" , description = "滤波" )
 	@GetMapping("/process" )
 	@HasPermission("demo_demo_view")
-	public R getProcess(@RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime, @RequestParam("columnName")String columnName) {
+	public R getProcess(@RequestParam("tableName") String tableName, @RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime, @RequestParam("columnName")String columnName) {
 //		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 //		Date dateTime1 = dateFormat.parse(vary3);
 //		Date dateTime2 = dateFormat.parse(vary4);
-		Integer header= demoMapper.findIdByCreateTime(startTime, "demo");
-		Integer bottom= demoMapper.findIdByCreateTime(endTime, "demo");
-		List<Double> res = demoMapper.selectColumn(columnName, "demo");
+
+//		Long count = demoMapper.selectCount(new LambdaQueryWrapper<DemoEntity>()
+//				.gt(DemoEntity::getCreateTime, startTime.minusMinutes(10))
+//				.lt(DemoEntity::getCreateTime, endTime)
+//		);
+//
+//		if (count > 1000) {
+//			return R.failed("时间段内数据过多，无法展示");
+//		}
+
+		Long header= demoMapper.findIdByCreateTime(startTime, tableName);
+		Long bottom= demoMapper.findIdByCreateTime(endTime, tableName);
+		List<Double> res = demoMapper.selectColumn(columnName, tableName);
+		Long firstRecord = demoMapper.getFirstRecordId(tableName);
+//		List<DemoEntity> demoList = demoMapper.selectList(new LambdaQueryWrapper<DemoEntity>()
+//				.gt(DemoEntity::getCreateTime, startTime.minusMinutes(10))
+//				.lt(DemoEntity::getCreateTime, endTime)
+//		);
 
 		Queue<Double> window = new LinkedList<>();
-		int windowSize = 5; // 滑动窗口的大小
+		int windowSize = 3; // 滑动窗口的大小
 		// 提取数据列
-		double[] data = new double[res.size()];
-		for (int i = 0; i < res.size(); i++) {
-			data[i] = res.get(i);
+		long listSize = bottom-header+windowSize;
+		double[] data = new double[(int) listSize];
+		for (int i = 0; i < listSize; i++) {
+			data[i] = res.get((int) (header-windowSize+1+i-firstRecord));
 		}
 
-		double[] filteredData = new double[res.size()];
+		double[] filteredData = new double[(int) listSize];
 		
 		// 应用滑动平均滤波
-		for(int i = 0; i < res.size(); i++){
+		for(int i = 0; i < listSize; i++){
 			filteredData[i] = slidingAverageFilter(data[i], windowSize, window);
 		}
 
 		// 更新平滑后的值到对象
-		for (int i = 0; i < res.size(); i++) {
-			res.set(i, filteredData[i]);
+		for (int i = 0; i < bottom-header+1; i++) {
+			res.set((int) (header-firstRecord+i), filteredData[windowSize-1+i]);
 		}
 
 		//截取需要的数
-		List<Double> subList = res.subList(header, bottom + 1);
+		List<Double> subList = res.subList((int)(header-firstRecord), (int) (bottom + 1-firstRecord));
 
 		return R.ok(subList);
 	}
@@ -205,9 +223,8 @@ public class DemoController {
 		for (double num : window) {
 			sum += (int) num;
 		}
-		int average = sum / window.size();
 
-		return average;
+		return sum / window.size();
 	}
 
 	/**

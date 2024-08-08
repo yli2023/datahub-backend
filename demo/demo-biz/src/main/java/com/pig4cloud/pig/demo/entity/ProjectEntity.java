@@ -23,7 +23,7 @@ public class ProjectEntity extends Model<ProjectEntity> {
 	/**
 	* 主键
 	*/
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     @Schema(description="主键")
     private Long id;
 

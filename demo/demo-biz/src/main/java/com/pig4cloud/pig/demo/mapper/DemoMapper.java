@@ -20,11 +20,14 @@ public interface DemoMapper extends BaseMapper<DemoEntity> {
 	List<String> getColumnNames(@Param("tableName") String tableName);
 
 	@Select("SELECT ID FROM ${tableName} WHERE CREATE_TIME = #{createTime}")
-	Integer findIdByCreateTime(@Param("createTime") LocalDateTime createTime, @Param("tableName") String tableName);
+	Long findIdByCreateTime(@Param("createTime") LocalDateTime createTime, @Param("tableName") String tableName);
 
 	@Select("SELECT ${columnName} FROM ${tableName}")
 	List<Double> selectColumn(@Param("columnName") String columnName, @Param("tableName") String tableName);
 
 	@Select("SELECT ${columnName} FROM ${tableName}")
 	List<Date> selectTime(@Param("columnName") String columnName, @Param("tableName") String tableName);
+
+	@Select("SELECT ID FROM ${tableName} LIMIT 1")
+	Long getFirstRecordId(@Param("tableName") String tableName);
 }
