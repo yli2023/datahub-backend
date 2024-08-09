@@ -253,8 +253,8 @@ public class DemoController {
 //		List<String> res = demoMapper.getColumnNames(tableName);
 //		return R.ok(res);
 //	}
-		public R getColumn() {
-		List<String> res = demoMapper.getColumnNames("demo");
+		public R getColumn(@RequestParam("tableName") String tableName) {
+		List<String> res = demoMapper.getColumnNames(tableName);
 		return R.ok(res);
 	}
 
@@ -266,8 +266,8 @@ public class DemoController {
 	@Operation(summary = "查询结果只返回时间" , description = "查询结果只返回时间" )
 	@GetMapping("/time" )
 	@HasPermission("demo_demo_view")
-	public R getTime() {
-		List<Date> res = demoMapper.selectTime("create_time", "demo");
+	public R getTime(@RequestParam("tableName") String tableName) {
+		List<Date> res = demoMapper.selectTime("create_time", tableName);
 		return R.ok(res);
 	}
 }
