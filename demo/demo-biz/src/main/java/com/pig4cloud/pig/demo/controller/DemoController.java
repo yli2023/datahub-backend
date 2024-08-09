@@ -152,14 +152,14 @@ public class DemoController {
 	}
 
 	/**
-	 * 将滤波后的一列数据返回前端
+	 * 将滤波且数据对齐后的一列数据返回前端
 	 * <p>
 	 * 所有列均显示
 	 */
 	@Operation(summary = "滤波" , description = "滤波" )
 	@GetMapping("/process" )
 	@HasPermission("demo_demo_view")
-	public R getProcess(@RequestParam("tableName") String tableName, @RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime, @RequestParam("columnName")String columnName) {
+	public R getProcess(@RequestParam("tableName") String tableName, @RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime, @RequestParam("columnName")String columnName, @RequestParam("num") Integer num) {
 //		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 //		Date dateTime1 = dateFormat.parse(vary3);
 //		Date dateTime2 = dateFormat.parse(vary4);
@@ -173,8 +173,8 @@ public class DemoController {
 //			return R.failed("时间段内数据过多，无法展示");
 //		}
 
-		Long header= demoMapper.findIdByCreateTime(startTime, tableName);
-		Long bottom= demoMapper.findIdByCreateTime(endTime, tableName);
+		Long header= demoMapper.findIdByCreateTime(startTime, tableName)-num;
+		Long bottom= demoMapper.findIdByCreateTime(endTime, tableName)-num;
 		List<Double> res = demoMapper.selectColumn(columnName, tableName);
 		Long firstRecord = demoMapper.getFirstRecordId(tableName);
 //		List<DemoEntity> demoList = demoMapper.selectList(new LambdaQueryWrapper<DemoEntity>()
@@ -204,7 +204,7 @@ public class DemoController {
 		}
 
 		//截取需要的数
-		List<Double> subList = res.subList((int)(header-firstRecord), (int) (bottom + 1-firstRecord));
+		List<Double> subList = res.subList((int)(header-firstRecord), (int) (bottom+1-firstRecord));
 
 		return R.ok(subList);
 	}
