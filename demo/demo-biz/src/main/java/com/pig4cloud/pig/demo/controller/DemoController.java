@@ -49,7 +49,6 @@ import java.util.*;
 public class DemoController {
 
     private final  DemoService demoService;
-	private final DemoMapper demoMapper;
 
     /**
      * 分页查询
@@ -140,12 +139,12 @@ public class DemoController {
 	@GetMapping("/select" )
 	@HasPermission("demo_demo_view")
 	public R getSelect(@RequestParam("tableName") String tableName, @RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime) {
-		Long header= demoMapper.findIdByCreateTime(startTime, tableName);
-		Long bottom= demoMapper.findIdByCreateTime(endTime, tableName);
-		Long firstRecord = demoMapper.getFirstRecordId(tableName);
+		Long header= demoService.findIdByCreateTime(startTime, tableName);
+		Long bottom= demoService.findIdByCreateTime(endTime, tableName);
+		Long firstRecord = demoService.getFirstRecordId(tableName);
 //		wrapper.like("username", "1").lt("id", 40).select("id","name");
 //		wrapper.gt(DemoEntity::getId, 40).select(DemoEntity::getUsername, DemoEntity::getNicename);
-		List<Date> res = demoMapper.selectTime("create_time", tableName);
+		List<Date> res = demoService.selectTime("create_time", tableName);
 		//截取需要的数
 		List<Date> subList = res.subList((int) (header-firstRecord), (int) (bottom + 1-firstRecord));
 		return R.ok(subList);
@@ -173,10 +172,10 @@ public class DemoController {
 //			return R.failed("时间段内数据过多，无法展示");
 //		}
 
-		Long header= demoMapper.findIdByCreateTime(startTime, tableName)-num;
-		Long bottom= demoMapper.findIdByCreateTime(endTime, tableName)-num;
-		List<Double> res = demoMapper.selectColumn(columnName, tableName);
-		Long firstRecord = demoMapper.getFirstRecordId(tableName);
+		Long header= demoService.findIdByCreateTime(startTime, tableName)-num;
+		Long bottom= demoService.findIdByCreateTime(endTime, tableName)-num;
+		List<Double> res = demoService.selectColumn(columnName, tableName);
+		Long firstRecord = demoService.getFirstRecordId(tableName);
 //		List<DemoEntity> demoList = demoMapper.selectList(new LambdaQueryWrapper<DemoEntity>()
 //				.gt(DemoEntity::getCreateTime, startTime.minusMinutes(10))
 //				.lt(DemoEntity::getCreateTime, endTime)
@@ -254,7 +253,7 @@ public class DemoController {
 //		return R.ok(res);
 //	}
 		public R getColumn(@RequestParam("tableName") String tableName) {
-		List<String> res = demoMapper.getColumnNames(tableName);
+		List<String> res = demoService.getColumnNames(tableName);
 		return R.ok(res);
 	}
 
@@ -267,7 +266,7 @@ public class DemoController {
 	@GetMapping("/time" )
 	@HasPermission("demo_demo_view")
 	public R getTime(@RequestParam("tableName") String tableName) {
-		List<Date> res = demoMapper.selectTime("create_time", tableName);
+		List<Date> res = demoService.selectTime("create_time", tableName);
 		return R.ok(res);
 	}
 }
