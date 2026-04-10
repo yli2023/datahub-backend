@@ -28,7 +28,7 @@ spring:
 # 要接在线 API：改为 enabled=true，并配置 base-url、api-key（或用环境变量 DEMO_AI_*）
 demo:
   ai:
-    enabled: false
+    enabled: true
     base-url: ${DEMO_AI_BASE_URL:}
     api-key: ${DEMO_AI_API_KEY:}
     model: gpt-4o-mini

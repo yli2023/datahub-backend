@@ -52,7 +52,7 @@ public class LlmClient {
 			.header("Authorization", "Bearer " + aiProperties.getApiKey())
 			.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
 			.build();
-		HttpResponse<String> resp = aiHttpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		HttpResponse<String> resp = sendWithRetry(req);
 		if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
 			throw new IllegalStateException("LLM HTTP " + resp.statusCode() + ": " + resp.body());
 		}
@@ -62,6 +62,26 @@ public class LlmClient {
 			throw new IllegalStateException("LLM 响应无 content: " + resp.body());
 		}
 		return content.asText();
+	}
+
+	private HttpResponse<String> sendWithRetry(HttpRequest req) throws Exception {
+		Exception last = null;
+		for (int i = 1; i <= 2; i++) {
+			try {
+				return aiHttpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+			}
+			catch (Exception e) {
+				last = e;
+				String msg = e.getMessage() == null ? "" : e.getMessage();
+				boolean retryable = msg.contains("Connection reset") || msg.contains("connection reset");
+				if (!retryable || i == 2) {
+					throw e;
+				}
+				log.warn("LLM 调用第{}次失败，准备重试: {}", i, msg);
+				Thread.sleep(300);
+			}
+		}
+		throw last == null ? new IllegalStateException("LLM 请求失败") : last;
 	}
 
 }

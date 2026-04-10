@@ -21,6 +21,7 @@ public class PromptTemplateService {
 				2) 输出**严格 JSON**，不要 Markdown 代码块，格式如下：
 				{"summary":"...","anomalyNotes":["..."],"possibleCauses":["..."],"actions":["..."],"confidence":0.0}
 				3) confidence 为 0~1；若信息不足，降低 confidence 并在 summary 中说明局限。
+				4) 如果判断“无明确异常”，请把 anomalyNotes / possibleCauses / actions 输出为空数组 []，并在 summary 用中性描述（例如“未见显著异常，整体平稳”）。
 				""";
 	}
 

@@ -54,6 +54,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
 			var s2 = demoService.getProcessedColumnSlice(request.getTableName(), start, end, request.getY2Name(), num);
 
 			var facts = TimeSeriesFeatureExtractor.analyze(times, s1, s2, request.getY1Name(), request.getY2Name());
+			List<String> ruleAnomalies = TimeSeriesFeatureExtractor.ruleAnomalyNotes(facts);
 			String factsText = TimeSeriesFeatureExtractor.toFactsText(facts);
 			factsText += midnightWarning(start);
 
@@ -80,6 +81,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
 			else {
 				parsed = ruleOnlyResponse(facts, request);
 			}
+			normalizeIfNoRealAnomaly(parsed, ruleAnomalies);
 			parsed.setCitations(citations);
 			parsed.setPlainText(buildPlainText(parsed));
 			parsed.setMeta(AiResponseMeta.builder()
@@ -179,6 +181,41 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
 			.actions(List.of("若已配置 OPENAI 兼容 API，可在配置中启用 demo.ai 以生成更自然的诊断建议。"))
 			.confidence(0.55)
 			.build();
+	}
+
+	private static void normalizeIfNoRealAnomaly(AiAnalysisResponse parsed, List<String> ruleAnomalies) {
+		boolean ruleHasAnomaly = ruleAnomalies != null && !ruleAnomalies.isEmpty();
+		if (ruleHasAnomaly) {
+			return;
+		}
+		List<String> notes = Optional.ofNullable(parsed.getAnomalyNotes()).orElse(List.of());
+		if (notes.isEmpty()) {
+			return;
+		}
+		boolean allNeutral = notes.stream().allMatch(AiAnalysisServiceImpl::looksNeutralNote);
+		if (!allNeutral) {
+			return;
+		}
+		parsed.setAnomalyNotes(List.of());
+		parsed.setPossibleCauses(List.of());
+		parsed.setActions(List.of());
+		if (!StringUtils.hasText(parsed.getSummary())) {
+			parsed.setSummary("未见显著异常，整体波动平稳。");
+		}
+	}
+
+	private static boolean looksNeutralNote(String s) {
+		if (!StringUtils.hasText(s)) {
+			return true;
+		}
+		String t = s.replace(" ", "");
+		String[] neutral = { "无异常", "未见异常", "未触发", "平稳", "无突变", "无波动加剧", "无明显异常", "稳定偏移", "非异常" };
+		for (String k : neutral) {
+			if (t.contains(k)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private AiAnalysisResponse parseLlmJson(String raw) throws Exception {
