@@ -22,3 +22,18 @@ spring:
     username: root
     password: root
     url: jdbc:mysql://pig-mysql:3306/pig_demo?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Asia/Shanghai
+
+# 时序 AI 分析（可被 Nacos 中同名配置覆盖）
+# enabled=false：强制离线，仅规则摘要 + 知识库 RAG，不调外部大模型（验通路用这个）
+# 要接在线 API：改为 enabled=true，并配置 base-url、api-key（或用环境变量 DEMO_AI_*）
+demo:
+  ai:
+    enabled: false
+    base-url: ${DEMO_AI_BASE_URL:}
+    api-key: ${DEMO_AI_API_KEY:}
+    model: gpt-4o-mini
+    temperature: 0.2
+    prompt-version: v1
+    knowledge-classpath: kb
+    max-knowledge-chunks: 5
+    max-conversation-turns: 8

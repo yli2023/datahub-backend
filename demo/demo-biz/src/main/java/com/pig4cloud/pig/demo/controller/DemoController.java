@@ -3,19 +3,20 @@ package com.pig4cloud.pig.demo.controller;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.pig4cloud.pig.common.core.util.R;
 import com.pig4cloud.pig.common.log.annotation.SysLog;
-import com.pig4cloud.pig.demo.mapper.DemoMapper;
 import com.pig4cloud.plugin.excel.annotation.ResponseExcel;
+import com.pig4cloud.pig.demo.ai.dto.AiAnalysisRequest;
+import com.pig4cloud.pig.demo.ai.dto.AiAnalysisResponse;
+import com.pig4cloud.pig.demo.ai.service.AiAnalysisService;
+import com.pig4cloud.pig.demo.ai.service.AiAuditService;
 import com.pig4cloud.pig.demo.entity.DemoEntity;
 import com.pig4cloud.pig.demo.service.DemoService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.pig4cloud.pig.common.security.annotation.HasPermission;
-import org.apache.ibatis.annotations.Param;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,17 +24,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.*;
-
-//import static com.pig4cloud.pig.demo.mapper.DemoMapper.windowSize;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * demo 表
@@ -49,6 +43,10 @@ import java.util.*;
 public class DemoController {
 
     private final  DemoService demoService;
+
+	private final AiAnalysisService aiAnalysisService;
+
+	private final AiAuditService aiAuditService;
 
     /**
      * 分页查询
@@ -139,15 +137,7 @@ public class DemoController {
 	@GetMapping("/select" )
 	@HasPermission("demo_demo_view")
 	public R getSelect(@RequestParam("tableName") String tableName, @RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime) {
-		Long header= demoService.findIdByCreateTime(startTime, tableName);
-		Long bottom= demoService.findIdByCreateTime(endTime, tableName);
-		Long firstRecord = demoService.getFirstRecordId(tableName);
-//		wrapper.like("username", "1").lt("id", 40).select("id","name");
-//		wrapper.gt(DemoEntity::getId, 40).select(DemoEntity::getUsername, DemoEntity::getNicename);
-		List<Date> res = demoService.selectTime("create_time", tableName);
-		//截取需要的数
-		List<Date> subList = res.subList((int) (header-firstRecord), (int) (bottom + 1-firstRecord));
-		return R.ok(subList);
+		return R.ok(demoService.getCreateTimeSlice(tableName, startTime, endTime));
 	}
 
 	/**
@@ -159,71 +149,7 @@ public class DemoController {
 	@GetMapping("/process" )
 	@HasPermission("demo_demo_view")
 	public R getProcess(@RequestParam("tableName") String tableName, @RequestParam("startTime") LocalDateTime startTime, @RequestParam("endTime")LocalDateTime endTime, @RequestParam("columnName")String columnName, @RequestParam("num") Integer num) {
-//		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//		Date dateTime1 = dateFormat.parse(vary3);
-//		Date dateTime2 = dateFormat.parse(vary4);
-
-//		Long count = demoMapper.selectCount(new LambdaQueryWrapper<DemoEntity>()
-//				.gt(DemoEntity::getCreateTime, startTime.minusMinutes(10))
-//				.lt(DemoEntity::getCreateTime, endTime)
-//		);
-//
-//		if (count > 1000) {
-//			return R.failed("时间段内数据过多，无法展示");
-//		}
-
-		Long header= demoService.findIdByCreateTime(startTime, tableName)-num;
-		Long bottom= demoService.findIdByCreateTime(endTime, tableName)-num;
-		List<Double> res = demoService.selectColumn(columnName, tableName);
-		Long firstRecord = demoService.getFirstRecordId(tableName);
-//		List<DemoEntity> demoList = demoMapper.selectList(new LambdaQueryWrapper<DemoEntity>()
-//				.gt(DemoEntity::getCreateTime, startTime.minusMinutes(10))
-//				.lt(DemoEntity::getCreateTime, endTime)
-//		);
-
-		Queue<Double> window = new LinkedList<>();
-		int windowSize = 3; // 滑动窗口的大小
-		// 提取数据列
-		long listSize = bottom-header+windowSize;
-		double[] data = new double[(int) listSize];
-		for (int i = 0; i < listSize; i++) {
-			data[i] = res.get((int) (header-windowSize+1+i-firstRecord));
-		}
-
-		double[] filteredData = new double[(int) listSize];
-		
-		// 应用滑动平均滤波
-		for(int i = 0; i < listSize; i++){
-			filteredData[i] = slidingAverageFilter(data[i], windowSize, window);
-		}
-
-		// 更新平滑后的值到对象
-		for (int i = 0; i < bottom-header+1; i++) {
-			res.set((int) (header-firstRecord+i), filteredData[windowSize-1+i]);
-		}
-
-		//截取需要的数
-		List<Double> subList = res.subList((int)(header-firstRecord), (int) (bottom+1-firstRecord));
-
-		return R.ok(subList);
-	}
-
-	private double slidingAverageFilter(double value, int windowSize, Queue<Double> window) {
-		// 添加当前值到滑动窗口中
-		window.add(value);
-
-		// 如果滑动窗口的大小超过了指定大小，移除最旧的元素
-		if (window.size() > windowSize) {
-			window.poll();
-		}
-
-		// 计算滑动窗口中所有元素的平均值
-		int sum = 0;
-		for (double num : window) {
-			sum += (int) num;
-		}
-
-		return sum / window.size();
+		return R.ok(demoService.getProcessedColumnSlice(tableName, startTime, endTime, columnName, num));
 	}
 
 	/**
@@ -248,10 +174,6 @@ public class DemoController {
 	@Operation(summary = "返回列名" , description = "返回列名" )
 	@GetMapping("/column" )
 	@HasPermission("demo_demo_view")
-//	public R getColumn(String tableName) {
-//		List<String> res = demoMapper.getColumnNames(tableName);
-//		return R.ok(res);
-//	}
 		public R getColumn(@RequestParam("tableName") String tableName) {
 		List<String> res = demoService.getColumnNames(tableName);
 		return R.ok(res);
@@ -268,5 +190,19 @@ public class DemoController {
 	public R getTime(@RequestParam("tableName") String tableName) {
 		List<Date> res = demoService.selectTime("create_time", tableName);
 		return R.ok(res);
+	}
+
+	@Operation(summary = "图表上下文智能分析", description = "统计特征 + 知识库 + 可选 LLM（与 /demo 同控制器，避免路由遗漏）")
+	@PostMapping("/ai/analyze")
+	@HasPermission("demo_demo_view")
+	public R<AiAnalysisResponse> aiAnalyze(@RequestBody AiAnalysisRequest request) {
+		return R.ok(aiAnalysisService.analyze(request));
+	}
+
+	@Operation(summary = "AI 调用指标", description = "内存聚合")
+	@GetMapping("/ai/metrics")
+	@HasPermission("demo_demo_view")
+	public R<Map<String, Object>> aiMetrics() {
+		return R.ok(aiAuditService.metricsSnapshot());
 	}
 }

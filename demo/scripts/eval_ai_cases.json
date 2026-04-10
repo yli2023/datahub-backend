@@ -1,0 +1,41 @@
+[
+  {
+    "name": "baseline_iot_cl",
+    "payload": {
+      "tableName": "iot_cl",
+      "y1Name": "temperature",
+      "y2Name": "humidity",
+      "startTime": "2024-07-20 00:01:00",
+      "endTime": "2024-07-20 01:00:00",
+      "num": 0,
+      "followUpQuestion": "",
+      "conversationHistory": []
+    }
+  },
+  {
+    "name": "followup_why_spike",
+    "payload": {
+      "tableName": "iot_cl",
+      "y1Name": "temperature",
+      "y2Name": "humidity",
+      "startTime": "2024-07-20 00:01:00",
+      "endTime": "2024-07-20 02:00:00",
+      "num": 1,
+      "followUpQuestion": "如果两列趋势相反，可能有哪些运维原因？",
+      "conversationHistory": []
+    }
+  },
+  {
+    "name": "midnight_warning_context",
+    "payload": {
+      "tableName": "iot_cl",
+      "y1Name": "temperature",
+      "y2Name": "humidity",
+      "startTime": "2024-07-20 00:00:00",
+      "endTime": "2024-07-20 00:30:00",
+      "num": 0,
+      "followUpQuestion": "起始时间选在 00:00:00 有什么风险？",
+      "conversationHistory": []
+    }
+  }
+]
