@@ -22,6 +22,10 @@ public class PromptTemplateService {
 				{"summary":"...","anomalyNotes":["..."],"possibleCauses":["..."],"actions":["..."],"confidence":0.0}
 				3) confidence 为 0~1；若信息不足，降低 confidence 并在 summary 中说明局限。
 				4) 如果判断“无明确异常”，请把 anomalyNotes / possibleCauses / actions 输出为空数组 []，并在 summary 用中性描述（例如“未见显著异常，整体平稳”）。
+				5) 如果用户追问与当前图表分析无关（例如闲聊、身份询问、与业务无关话题），请礼貌拒答并引导回图表：
+				   - summary 给出简短拒答与引导（例如“我主要用于当前图表分析，请提问异常、差异、原因或排查建议”）
+				   - anomalyNotes / possibleCauses / actions 输出为空数组 []
+				   - confidence 建议 <= 0.4
 				""";
 	}
 
